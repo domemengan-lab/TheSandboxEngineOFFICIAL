@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TheSandboxEngine - Global Server Matrix</title>
+    <!-- Loads official free P2P networking framing libraries -->
+    <script src="https://unpkg.com"></script>
+    <style>
+        body {
+            background-color: #080808;
+            color: #ffffff;
+            font-family: 'Consolas', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        h1 { color: #00ff55; margin-bottom: 5px; font-size: 22px; text-shadow: 0 0 10px rgba(0,255,87,0.3); }
+        .chat-container { width: 700px; margin-bottom: 10px; text-align: left; display: flex; gap: 10px; }
+        input { background: #1a1a1a; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; flex: 1; font-family: monospace; }
+        button { background: #00ff55; color: black; border: none; padding: 8px 15px; font-weight: bold; border-radius: 4px; cursor: pointer; font-family: monospace; }
+        #chatDisplay { width: 680px; height: 90px; background: #111; border: 1px solid #222; margin-bottom: 10px; padding: 10px; overflow-y: auto; text-align: left; font-size: 13px; color: #fff; border-radius: 4px; }
+        #canvasZone { border: 4px solid #00ff55; background-color: #000; box-shadow: 0 0 25px rgba(0, 255, 85, 0.15); border-radius: 4px; }
+        #logTerminal { width: 680px; height: 50px; background:#111; border:1px solid #222; margin-top:10px; padding:8px; overflow-y:auto; text-align:left; font-size:12px; color:#00ff55; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <h1>🛠️ TheSandboxEngine Server Node 🛠️</h1>
+    
+    <!-- 1. Real-Time Chat Display Feed UI -->
+    <div id="chatDisplay">[SYSTEM]: Security Core Online. Chat pipeline active.</div>
+    <div class="chat-container">
+        <input type="text" id="chatInput" placeholder="Type message to room users...">
+        <button onclick="sendEngineChat()">Send Message</button>
+    </div>
+
+    <!-- 2. Active Structural Physics Canvas Zone -->
+    <canvas id="canvasZone" width="700" height="380"></canvas>
+    <div id="logTerminal">> Server matrix initialized. Awaiting pipeline instruction arrays...</div>
+
+    <script>
+        const canvas = document.getElementById('canvasZone');
+        const ctx = canvas.getContext('2d');
+
+        // --- GLOBAL CORE PARAMETERS ---
+        window.engineGravity = 0.35;
+        window.spawnColor = "#00ff55";
+        window.spawnSize = 30;
+        window.sandboxObjects = [];
+        window.bannedNetworkIds = []; // Banned IP/Client ID array tracking list
+
+        // --- DYNAMIC ROOM CAPACITY LOGIC MODULES ---
+        const MAX_ROOM_CAPACITY = 50; // Hard cap capacity ceiling
+        let activeRoomNumber = 1;
+        let currentRoomPopulation = 0;
+        let peerNetworkManager = null;
+        let roomConnectionsMap = {};
+
+        function bootUpDynamicEngineServer() {
+            let dynamicRoomId = `TheSandboxEngine-Room-${activeRoomNumber}`;
+            peerNetworkManager = new Peer(dynamicRoomId);
+
+            peerNetworkManager.on('open', (id) => {
+                document.getElementById('logTerminal').innerHTML += `<br>> [SERVER]: Dynamic Server Online: <span style='color:#00ff55;'>${id}</span>`;
+            });
+
+            peerNetworkManager.on('connection', (conn) => {
+                // MODERATION SECURITY CHECK: Instantly send banned IDs to 444/404 breakdown
+                if (window.bannedNetworkIds.includes(conn.peer)) {
+                    triggerFakeNetworkTimeout(conn);
+                    return;
+                }
+
+                // CAPACITY CHECK: If room population exceeds 50, reroute user node
+                if (currentRoomPopulation >= MAX_ROOM_CAPACITY) {
+                    document.getElementById('logTerminal').innerHTML += `<br><span style='color:orange;'>! [CAPACITY FULL]: Server ${activeRoomNumber} hit 50 cap limit. Rerouting peer...</span>`;
+                    conn.send({ type: "room_full_reroute", nextRoom: activeRoomNumber + 1 });
+                    setTimeout(() => { conn.close(); }, 200);
+                    return;
+                }
+
+                // Add peer to system loops if space available
+                currentRoomPopulation++;
+                roomConnectionsMap[conn.peer] = conn;
+                document.getElementById('logTerminal').innerHTML += `<br>> [JOIN]: User linked to loop. Population: ${currentRoomPopulation}/${MAX_ROOM_CAPACITY}`;
+
+                conn.on('data', (data) => {
+                    if (data.type === "chat") {
+                        displayChatMessage(data.sender, data.text);
+                    }
+                    if (data.type === "executor_run") {
+                        try { eval(data.content); } catch(e){}
+                    }
+                    // Handle client processing connection errors or full server bounces
+                    if (data.type === "room_full_reroute") {
+                        activeRoomNumber = data.nextRoom;
+                        bootUpDynamicEngineServer();
+                    }
+                });
+
+                conn.on('close', () => {
+                    currentRoomPopulation = Math.max(0, currentRoomPopulation - 1);
+                    delete roomConnectionsMap[conn.peer];
+                    document.getElementById('logTerminal').innerHTML += `<br>> [LEAVE]: Peer dropped connection vector. Population: ${currentRoomPopulation}`;
+                });
+            });
+
+            peerNetworkManager.on('error', (err) => {
+                if (err.type === 'id-taken-error') {
+                    activeRoomNumber++;
+                    bootUpDynamicEngineServer();
+                }
+            });
+        }
+
+        // --- GAME ENGINE CHAT LOGIC ---
+        function sendEngineChat() {
+            let msgText = document.getElementById('chatInput').value;
+            if (!msgText.trim()) return;
+
+            displayChatMessage("Host", msgText);
+            
+            // Broadcast packet data to all 50 concurrent room occupants
+            for (let id in roomConnectionsMap) {
+                roomConnectionsMap[id].send({ type: "chat", sender: "Admin", text: msgText });
+            }
+            document.getElementById('chatInput').value = "";
+        }
+
+        function displayChatMessage(sender, text) {
+            let chatDisplay = document.getElementById('chatDisplay');
+            chatDisplay.innerHTML += `<br><span style="color:#00ff55;">[${sender}]:</span> ${text}`;
+            chatDisplay.scrollTop = chatDisplay.scrollHeight; 
+        }
+
+        // --- MODERATION EVICTION MECHANICS ---
+        window.banUserSession = function(targetPeerId) {
+            if (!window.bannedNetworkIds.includes(targetPeerId)) {
+                window.bannedNetworkIds.push(targetPeerId);
+            }
+            if (roomConnectionsMap[targetPeerId]) {
+                triggerFakeNetworkTimeout(roomConnectionsMap[targetPeerId]);
+                delete roomConnectionsMap[targetPeerId];
+            }
+        };
+
+        function triggerFakeNetworkTimeout(connection) {
+            // Push critical crash payload down stream channel
+            connection.send({ type: "critical_disconnect_vector" });
+            setTimeout(() => { connection.close(); }, 100);
+            document.getElementById('logTerminal').innerHTML += `<br><span style='color:red;'>> [MODERATION]: Blocked user network sequence: ${connection.peer}</span>`;
+        }
+
+        // --- MOUSE INPUT BLOCK PLACEMENT GRAPHICS ---
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            window.sandboxObjects.push({
+                x: x - window.spawnSize / 2,
+                y: y - window.spawnSize / 2,
+                size: window.spawnSize,
+                color: window.spawnColor,
+                velocityY: 0
+            });
+        });
+
+        // --- RUNNING SIMULATION PHYSICS LOOP ---
+        function renderEngineFrame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            window.sandboxObjects.forEach(obj => {
+                obj.velocityY += window.engineGravity;
+                obj.y += obj.velocityY;
+
+                const structuralFloorLimit = canvas.height - obj.size;
+                if (obj.y >= structuralFloorLimit) {
+                    obj.y = structuralFloorLimit;
+                    obj.velocityY *= -0.55; 
+                }
+
+                ctx.fillStyle = obj.color;
+                ctx.fillRect(obj.x, obj.y, obj.size, obj.size);
+            });
+
+            requestAnimationFrame(renderEngineFrame);
+        }
+
+        // Initialize connection managers automatically
+        bootUpDynamicEngineServer();
+        renderEngineFrame();
+    </script>
+</body>
+</html>
